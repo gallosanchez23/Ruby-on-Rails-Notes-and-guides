@@ -1,0 +1,200 @@
+#![RSpec-logo](http://rspec.info/images/logo.png) Notas y guía de RSpec - rails
+
+Este documento contiene seccionadamente todos las anotaciones que se realizaron durante las sesiones de capacitación acerca de pruebas
+con RSpec en Ruby on Rails 5.
+
+De igual forma se incluye una guía paso a paso para la instalación de este ambiente de pruebas listo para iniciar con el desarrollo.
+
+
+
+Concepts
+---
+- TDD
+- Test first
+- Red, green, refactor
+
+
+
+Rails gems
+---
+####RSpec
+`rspec-rails` es nuestra gema principal, con la que generaremos en sí las pruebas del sistema que estemos desarrollando.
+
+####Factory Girl
+`factory_girl_rails` es una gema que nos permitirá generar instancias de la clase que se desea para la ejecución de pruebas.
+
+####FFaker
+Con `ffaker` podremos generar información de muestra o falsa para llenar las instancias de clase que realicemos con
+FactoryGirl con el objetivo de generar algunas pruebas específicas.
+
+####Shoulda Matchers
+Por último, `shoulda-matchers` es una gema que nos permitirá emplear métodos y acciones con una sintaxis más léxica y fácil
+de entender dentro de los archivos de pruebas rspec.
+
+
+
+Creating test database
+---
+Antes de comenzar con la instalación de ambiente de rspec es importante crear una base de datos "test",
+en donde se correrán todas las pruebas que generemos.
+
+Primeramente se debe configurar el documento `database.yml` para el manejo de la base de datos de prueba. Ejemplo:
+
+```yml
+test:
+  adapter: mysql2
+  username: root
+  password: password
+  host: localhost
+  database: database_test
+```
+
+**NOTA:** es muy importante **NO tener la misma base de datos** para test y algún otro ambiente de Rails, ya que ésta se borrará
+y reescribirá cada vez que se corran pruebas.
+
+Para crear la nueva base de datos de pruebas, correr el siguiente comando en la terminal:
+
+```
+$ rake db:create RAILS_ENV=test
+```
+
+y posteriormente, para correr migraciones en la misma base de datos:
+
+```
+$ rake db:migrate RAILS_ENV=test
+```
+
+
+
+Installing gems
+---
+Agregar el siguiente bloque de código con las gemas requeridas para el ambiente de rspec al `Gemfile`:
+
+```ruby
+group :development, :test do
+  gem 'rspec-rails'
+  gem 'factory_girl_rails'
+  gem 'ffaker', require: true
+  gem 'shoulda-matchers'
+end
+```
+
+Posteriormente ejecutar el comando `bundle install` en terminal para instalar las gemas recientemente agregadas.
+
+####RSpec
+A continuación será necesario inicializar un directorio `spec/`, para esto se requiere ejecutar el siguiente comando en terminal:
+
+```
+$ rails generate rspec:install
+```
+
+####Factory Girl
+Para terminar la instalación de Factory Girl será necesario agregar el siguietne bloque de código en el documento `application.rb`
+de tu proyecto, dentro de la clase `Application`:
+
+ ```ruby
+config.generators do |g|
+  g.fixture_replacement :factory_girl, dir: 'spec/factories'
+end
+```
+
+Esta configuración de Factory Girl deberá ser suficiente para que cuando generemos nuestra primera prueba con rspec en el proyecto,
+se genere un directorio `spec/factories`, en donde se crearán todos los siguientes factories.
+
+####Shoulda Matchers
+Agregar el siguiente bloque al documento `rails_helper.rb` para agregar la configuración de `should-matchers`:
+
+```ruby
+Shoulda::Matchers.configure do |config|
+  config.integrate do |with|
+    # Test framework:
+    with.test_framework :rspec
+
+    # Libraries:
+    with.library :rails
+  end
+end
+```
+
+Gracias a esta gema tu documento rspec podrá verse de la siguiente forma:
+
+```ruby
+RSpec.describe Person, type: :model do
+  it { should validate_presence_of(:name) }
+end
+```
+
+
+
+/rspec document
+---
+Agregar esta línea para obtener detalles de las pruebas que se están ejecutando:
+
+```ruby
+--format documentation
+```
+
+
+
+Model document
+---
+La siguiente líne de código creará dos tipos de registro para el atriburo o campo `role`:
+
+```ruby
+enum role: [:member, :admin]
+```
+
+
+
+Factory document
+---
+Es importante agregar la siguiente línea al inicio del documento:
+
+```ruby
+require 'ffaker'
+```
+
+Ejemplo de factory:
+
+```ruby
+facotry :user do
+  email { FFaker::Internet.email }
+  firstname { FFaker::NameMX.first_name }
+  lastname { FFaker::NameMX.last_name }
+  password 'changeme'
+  password_confirmation 'changeme'
+  role 0
+end
+
+factory :member, parent: :user do |user|
+  user.role 0
+  password 'member123'
+  password_conformation 'member123'
+end
+
+factory :admin, parent: :user do |user|
+  user.role 1
+  password 'admin123'
+  password_confirmation 'admin123'
+end
+```
+
+Al correr la línea:
+
+```ruby
+FactoryGirl.create(:user)
+```
+
+se instanciará un objeto con los atributos de `user`, sin embargo, cuando se corra la línea:
+
+```ruby
+FactoryGirl.create(:admin)
+```
+
+o
+
+```ruby
+FactoryGirl.create(:member)
+```
+
+se creará un objeto con los atributos predefinidos por el factory correspondiente.
